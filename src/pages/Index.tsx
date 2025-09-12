@@ -1,6 +1,7 @@
 import { Hero } from "@/components/Hero";
 import { Features } from "@/components/Features";
 import { Process } from "@/components/Process";
+import { AIModules } from "@/components/AIModules";
 import { CallToAction } from "@/components/CallToAction";
 
 const Index = () => {
@@ -9,6 +10,7 @@ const Index = () => {
       <Hero />
       <Features />
       <Process />
+      <AIModules />
       <CallToAction />
     </div>
   );
