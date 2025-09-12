@@ -2,41 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* AI Drug Discovery Design System - Scientific Excellence */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core Scientific Palette */
+    --background: 210 40% 98%;
+    --foreground: 210 25% 8%;
 
+    /* Scientific Blue Spectrum */
+    --primary: 212 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 212 100% 60%;
+    --primary-light: 212 100% 95%;
+
+    /* Research Teal Spectrum */
+    --secondary: 180 100% 32%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-glow: 180 100% 50%;
+    --secondary-light: 180 100% 95%;
+
+    /* Molecular Green Spectrum */
+    --accent: 150 100% 40%;
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 150 100% 55%;
+    --accent-light: 150 100% 95%;
+
+    /* Neutral Scientific Palette */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    --card-foreground: 210 25% 8%;
+    --muted: 210 15% 94%;
+    --muted-foreground: 210 10% 40%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 210 25% 8%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --border: 210 15% 88%;
+    --input: 210 15% 88%;
+    --ring: 212 100% 40%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Scientific Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-molecular: linear-gradient(45deg, hsl(var(--secondary)), hsl(var(--accent)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(var(--primary-light)));
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Advanced Shadows */
+    --shadow-scientific: 0 25px 50px -12px hsl(var(--primary) / 0.15);
+    --shadow-molecular: 0 10px 40px -10px hsl(var(--secondary) / 0.2);
+    --shadow-glow: 0 0 30px hsl(var(--primary-glow) / 0.3);
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Animation Properties */
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-molecular: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
