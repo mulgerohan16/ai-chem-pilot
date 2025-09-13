@@ -24,55 +24,138 @@ export const MolecularVisualizer = ({ smiles, properties }: MolecularVisualizerP
   const [showHydrogens, setShowHydrogens] = useState(false);
   const [colorScheme, setColorScheme] = useState<'cpk' | 'element' | 'property'>('cpk');
 
-  // Mock 3D structure representation (in real app, would use 3Dmol.js or similar)
+  // Enhanced 2D molecular structure visualization
   const renderMolecule = () => {
     const atoms = smiles.match(/[A-Z][a-z]?/g) || [];
     const bondCount = (smiles.match(/[-=#]/g) || []).length;
     
+    // Count atoms
+    const atomCounts: Record<string, number> = {};
+    atoms.forEach(atom => {
+      atomCounts[atom] = (atomCounts[atom] || 0) + 1;
+    });
+    
     return (
-      <div 
-        className="relative w-full h-64 bg-gradient-to-br from-background to-muted rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center overflow-hidden"
-        style={{
-          transform: `rotateX(${rotationX[0]}deg) rotateY(${rotationY[0]}deg) scale(${zoom[0]})`
-        }}
-      >
-        {/* Mock molecular visualization */}
-        <div className="grid grid-cols-4 gap-2 p-4">
-          {atoms.slice(0, 12).map((atom, index) => (
-            <div
-              key={index}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                atom === 'C' ? 'bg-gray-600 text-white' :
-                atom === 'N' ? 'bg-blue-500 text-white' :
-                atom === 'O' ? 'bg-red-500 text-white' :
-                atom === 'S' ? 'bg-yellow-500 text-black' :
-                'bg-primary text-primary-foreground'
-              }`}
-              style={{
-                transform: `rotate(${index * 30}deg)`,
-                animationDelay: `${index * 0.1}s`
-              }}
-            >
-              {atom}
+      <div className="relative w-full h-64 bg-gradient-to-br from-background via-background/80 to-muted/30 rounded-lg border border-border overflow-hidden">
+        <div 
+          className="w-full h-full flex items-center justify-center p-4"
+          style={{ transform: `scale(${zoom[0]})` }}
+        >
+          {/* 2D Molecular Structure Layout */}
+          <div className="relative">
+            {/* Central molecular backbone */}
+            <div className="flex items-center space-x-3">
+              {atoms.slice(0, 8).map((atom, index) => {
+                const isRingAtom = index % 3 === 0;
+                const yOffset = isRingAtom ? -20 : index % 2 === 0 ? 0 : 20;
+                
+                return (
+                  <div key={index} className="relative">
+                    {/* Bonds */}
+                    {showBonds && index < atoms.length - 1 && (
+                      <div className="absolute left-8 top-1/2 w-6 h-0.5 bg-foreground/60 -translate-y-1/2 z-0" />
+                    )}
+                    
+                    {/* Atom */}
+                    <div
+                      className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 hover:scale-110 ${
+                        atom === 'C' ? 'bg-zinc-600 text-white border-zinc-400' :
+                        atom === 'N' ? 'bg-blue-600 text-white border-blue-400' :
+                        atom === 'O' ? 'bg-red-600 text-white border-red-400' :
+                        atom === 'S' ? 'bg-yellow-500 text-black border-yellow-300' :
+                        atom === 'P' ? 'bg-orange-600 text-white border-orange-400' :
+                        atom === 'F' ? 'bg-green-500 text-white border-green-300' :
+                        atom === 'Cl' ? 'bg-green-600 text-white border-green-400' :
+                        atom === 'Br' ? 'bg-amber-700 text-white border-amber-500' :
+                        'bg-primary text-primary-foreground border-primary/60'
+                      }`}
+                      style={{
+                        transform: `translateY(${yOffset}px)`,
+                      }}
+                    >
+                      {atom}
+                    </div>
+                    
+                    {/* Hydrogen indicators */}
+                    {showHydrogens && atom === 'C' && (
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
+                        H₃
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+            
+            {/* Ring structures for complex molecules */}
+            {atoms.length > 6 && (
+              <div className="absolute -top-16 left-1/2 -translate-x-1/2">
+                <div className="relative w-20 h-20">
+                  {Array.from({ length: 6 }, (_, i) => {
+                    const angle = (i * 60) * (Math.PI / 180);
+                    const x = Math.cos(angle) * 30;
+                    const y = Math.sin(angle) * 30;
+                    
+                    return (
+                      <div
+                        key={i}
+                        className="absolute w-6 h-6 rounded-full bg-zinc-500 border border-zinc-400 flex items-center justify-center text-xs text-white"
+                        style={{
+                          left: `calc(50% + ${x}px)`,
+                          top: `calc(50% + ${y}px)`,
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      >
+                        C
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Ring bonds */}
+                  {showBonds && (
+                    <svg className="absolute inset-0 w-full h-full">
+                      {Array.from({ length: 6 }, (_, i) => {
+                        const angle1 = (i * 60) * (Math.PI / 180);
+                        const angle2 = ((i + 1) * 60) * (Math.PI / 180);
+                        const x1 = 50 + Math.cos(angle1) * 40;
+                        const y1 = 50 + Math.sin(angle1) * 40;
+                        const x2 = 50 + Math.cos(angle2) * 40;
+                        const y2 = 50 + Math.sin(angle2) * 40;
+                        
+                        return (
+                          <line
+                            key={i}
+                            x1={`${x1}%`}
+                            y1={`${y1}%`}
+                            x2={`${x2}%`}
+                            y2={`${y2}%`}
+                            stroke="currentColor"
+                            strokeWidth="1"
+                            className="text-foreground/60"
+                          />
+                        );
+                      })}
+                    </svg>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Molecular formula overlay */}
+        <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded px-2 py-1 text-xs font-mono">
+          {Object.entries(atomCounts).map(([atom, count]) => (
+            <span key={atom} className="mr-1">
+              {atom}{count > 1 && <sub>{count}</sub>}
+            </span>
           ))}
         </div>
         
-        {/* Bond indicators */}
-        {showBonds && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            {Array.from({ length: bondCount }, (_, i) => (
-              <div
-                key={i}
-                className="w-12 h-0.5 bg-muted-foreground/40 absolute"
-                style={{
-                  transform: `rotate(${i * 45}deg)`,
-                  transformOrigin: 'center'
-                }}
-              />
-            ))}
-          </div>
-        )}
+        {/* SMILES string overlay */}
+        <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm rounded px-2 py-1 text-xs font-mono max-w-[200px] truncate">
+          {smiles}
+        </div>
       </div>
     );
   };
