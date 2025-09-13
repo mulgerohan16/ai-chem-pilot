@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { MolecularVisualizer } from "./MolecularVisualizer";
+import { PropertyFilter } from "./PropertyFilter";
+import { Download, Upload, Zap, Search } from "lucide-react";
 
 interface SMILESAnalysis {
   smiles: string;
@@ -40,7 +45,16 @@ export const SMILESModule = () => {
   const [analysis, setAnalysis] = useState<SMILESAnalysis | null>(null);
   const [batchInput, setBatchInput] = useState("");
   const [batchResults, setBatchResults] = useState<SMILESAnalysis[]>([]);
+  const [filteredResults, setFilteredResults] = useState<SMILESAnalysis[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedMolecule, setSelectedMolecule] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Analysis settings
+  const [includeDescriptors, setIncludeDescriptors] = useState(true);
+  const [checkSimilarity, setCheckSimilarity] = useState(false);
+  const [similarityThreshold, setSimilarityThreshold] = useState([0.7]);
+  
   const { toast } = useToast();
 
   const mockAnalyzeSMILES = (smiles: string): SMILESAnalysis => {
@@ -131,6 +145,68 @@ export const SMILESModule = () => {
     setInputSMILES(smiles);
   };
 
+  const handleFilterChange = (criteria: any) => {
+    const filtered = batchResults.filter(result => {
+      const mw = result.molecularWeight;
+      return (
+        mw >= criteria.mwRange[0] && mw <= criteria.mwRange[1] &&
+        result.heteroatoms <= criteria.hbaMax &&
+        result.lipinski.violations <= (criteria.lipinskiCompliant ? 0 : 4)
+      );
+    });
+    setFilteredResults(filtered);
+  };
+
+  const exportResults = () => {
+    const data = batchResults.map(result => ({
+      SMILES: result.smiles,
+      Valid: result.isValid,
+      MolecularWeight: result.molecularWeight,
+      Formula: result.formula,
+      Atoms: result.atomCount,
+      Bonds: result.bondCount,
+      Rings: result.rings,
+      AromaticRings: result.aromaticRings,
+      Heteroatoms: result.heteroatoms,
+      RotatableBonds: result.rotatable,
+      LipinskiViolations: result.lipinski.violations
+    }));
+    
+    const csv = [
+      Object.keys(data[0]).join(','),
+      ...data.map(row => Object.values(row).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'smiles_analysis_results.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Export Complete",
+      description: `Exported ${data.length} analysis results to CSV file`,
+    });
+  };
+
+  const findSimilarMolecules = (targetSmiles: string) => {
+    // Mock similarity search
+    const similar = batchResults.filter(result => 
+      result.smiles !== targetSmiles && 
+      result.molecularWeight > analysis!.molecularWeight * 0.8 &&
+      result.molecularWeight < analysis!.molecularWeight * 1.2
+    );
+    
+    toast({
+      title: "Similarity Search",
+      description: `Found ${similar.length} potentially similar molecules`,
+    });
+    
+    return similar;
+  };
+
   return (
     <div className="space-y-6">
       <Card className="p-6 bg-gradient-card border-0 shadow-molecular">
@@ -145,9 +221,10 @@ export const SMILESModule = () => {
         </div>
 
         <Tabs defaultValue="single" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="single">Single Analysis</TabsTrigger>
             <TabsTrigger value="batch">Batch Processing</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced Tools</TabsTrigger>
           </TabsList>
 
           <TabsContent value="single" className="space-y-4">
@@ -178,12 +255,52 @@ export const SMILESModule = () => {
               ))}
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="descriptors"
+                  checked={includeDescriptors}
+                  onCheckedChange={setIncludeDescriptors}
+                />
+                <label htmlFor="descriptors" className="text-sm font-medium">
+                  Include Molecular Descriptors
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="similarity"
+                  checked={checkSimilarity}
+                  onCheckedChange={setCheckSimilarity}
+                />
+                <label htmlFor="similarity" className="text-sm font-medium">
+                  Check Database Similarity
+                </label>
+              </div>
+            </div>
+
+            {checkSimilarity && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Similarity Threshold: {similarityThreshold[0].toFixed(2)}
+                </label>
+                <Slider
+                  value={similarityThreshold}
+                  onValueChange={setSimilarityThreshold}
+                  min={0.5}
+                  max={1.0}
+                  step={0.05}
+                  className="w-full"
+                />
+              </div>
+            )}
+
             <Button 
               onClick={analyzeSingle}
               disabled={isAnalyzing}
               variant="scientific"
               className="w-full"
             >
+              <Search className="w-4 h-4 mr-2" />
               {isAnalyzing ? "Analyzing..." : "Analyze SMILES"}
             </Button>
           </TabsContent>
@@ -202,14 +319,62 @@ export const SMILESModule = () => {
               />
             </div>
 
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Upload className="w-4 h-4 mr-2" />
+                Upload File
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setBatchInput(sampleMolecules.join('\n'))}>
+                Load Samples
+              </Button>
+            </div>
+
             <Button 
               onClick={analyzeBatch}
               disabled={isAnalyzing}
               variant="scientific"
               className="w-full"
             >
+              <Zap className="w-4 h-4 mr-2" />
               {isAnalyzing ? "Processing Batch..." : "Analyze Batch"}
             </Button>
+          </TabsContent>
+
+          <TabsContent value="advanced" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="p-4">
+                <h4 className="font-semibold mb-2">Molecular Comparison</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Compare two molecules for structural similarity
+                </p>
+                <Button variant="outline" size="sm" className="w-full">
+                  Start Comparison
+                </Button>
+              </Card>
+              
+              <Card className="p-4">
+                <h4 className="font-semibold mb-2">Substructure Search</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Find molecules containing specific substructures
+                </p>
+                <Button variant="outline" size="sm" className="w-full">
+                  Search Substructures
+                </Button>
+              </Card>
+            </div>
+            
+            <Card className="p-4">
+              <h4 className="font-semibold mb-2">Molecular Fingerprints</h4>
+              <p className="text-sm text-muted-foreground mb-3">
+                Generate molecular fingerprints for similarity analysis
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">Morgan</Button>
+                <Button variant="outline" size="sm">MACCS</Button>
+                <Button variant="outline" size="sm">RDKit</Button>
+                <Button variant="outline" size="sm">AtomPair</Button>
+              </div>
+            </Card>
           </TabsContent>
         </Tabs>
       </Card>
@@ -219,16 +384,53 @@ export const SMILESModule = () => {
         <Card className="p-6 bg-card border shadow-molecular">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold text-card-foreground">Analysis Results</h3>
-            <Badge variant={analysis.isValid ? "default" : "destructive"}>
-              {analysis.isValid ? "✓ Valid" : "✗ Invalid"}
-            </Badge>
+            <div className="flex gap-2">
+              <Badge variant={analysis.isValid ? "default" : "destructive"}>
+                {analysis.isValid ? "✓ Valid" : "✗ Invalid"}
+              </Badge>
+              <Button variant="outline" size="sm" onClick={exportResults}>
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-4">
             <div className="bg-muted/50 p-3 rounded-lg">
               <div className="text-sm text-muted-foreground">SMILES</div>
               <code className="text-sm font-mono text-primary">{analysis.smiles}</code>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedMolecule(selectedMolecule === analysis.smiles ? null : analysis.smiles)}
+                >
+                  {selectedMolecule === analysis.smiles ? 'Hide 3D' : 'View 3D'}
+                </Button>
+                {checkSimilarity && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => findSimilarMolecules(analysis.smiles)}
+                  >
+                    Find Similar
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {selectedMolecule === analysis.smiles && (
+              <MolecularVisualizer 
+                smiles={analysis.smiles}
+                properties={{
+                  mw: analysis.molecularWeight,
+                  logp: 2.1, // Mock value
+                  hbd: 1,
+                  hba: 4,
+                  tpsa: 63.6
+                }}
+              />
+            )}
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="text-center bg-primary-light p-3 rounded-lg">
@@ -276,9 +478,31 @@ export const SMILESModule = () => {
       {/* Batch Results */}
       {batchResults.length > 0 && (
         <Card className="p-6 bg-card border shadow-molecular">
-          <h3 className="text-xl font-bold text-card-foreground mb-4">Batch Results</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-card-foreground">Batch Results</h3>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportResults}>
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="mb-6">
+              <PropertyFilter 
+                onFilterChange={handleFilterChange}
+                moleculeCount={batchResults.length}
+                filteredCount={filteredResults.length}
+              />
+            </div>
+          )}
+
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {batchResults.map((result, index) => (
+            {(showFilters ? filteredResults : batchResults).map((result, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div className="flex-1 min-w-0">
                   <code className="text-sm font-mono text-primary block truncate">
@@ -289,9 +513,18 @@ export const SMILESModule = () => {
                     Violations: {result.lipinski.violations}
                   </div>
                 </div>
-                <Badge variant={result.isValid ? "default" : "destructive"} className="ml-2">
-                  {result.isValid ? "Valid" : "Invalid"}
-                </Badge>
+                <div className="flex gap-2 ml-2">
+                  <Badge variant={result.isValid ? "default" : "destructive"}>
+                    {result.isValid ? "Valid" : "Invalid"}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedMolecule(selectedMolecule === result.smiles ? null : result.smiles)}
+                  >
+                    {selectedMolecule === result.smiles ? 'Hide' : 'View'}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

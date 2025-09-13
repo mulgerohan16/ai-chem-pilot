@@ -125,27 +125,6 @@ export const Process = () => {
           ))}
         </div>
 
-        {/* Bottom Stats */}
-        <div className="mt-20 text-center">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            <div>
-              <div className="text-3xl font-bold text-primary mb-2">2M+</div>
-              <div className="text-muted-foreground">Molecules Analyzed</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-secondary mb-2">99.7%</div>
-              <div className="text-muted-foreground">Accuracy Rate</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-accent mb-2">156</div>
-              <div className="text-muted-foreground">Patents Filed</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary mb-2">24/7</div>
-              <div className="text-muted-foreground">AI Processing</div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

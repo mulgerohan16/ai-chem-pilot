@@ -6,6 +6,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MolecularVisualizer } from "./MolecularVisualizer";
+import { PropertyFilter } from "./PropertyFilter";
+import { Download, RefreshCw, Filter } from "lucide-react";
 
 interface GeneratedMolecule {
   id: string;
@@ -69,6 +72,11 @@ export const VAEModule = () => {
   const [trainingLoss, setTrainingLoss] = useState<number>(0);
   const [klDivergence, setKlDivergence] = useState<number>(0);
   const [reconstructionLoss, setReconstructionLoss] = useState<number>(0);
+  
+  // Interactive Features
+  const [selectedMolecule, setSelectedMolecule] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filteredMolecules, setFilteredMolecules] = useState<GeneratedMolecule[]>([]);
   
   const { toast } = useToast();
 
@@ -178,13 +186,65 @@ export const VAEModule = () => {
   const resetModel = () => {
     setModelStatus('untrained');
     setGeneratedMolecules([]);
+    setFilteredMolecules([]);
     setProgress(0);
     setTrainingLoss(0);
     setKlDivergence(0);
     setReconstructionLoss(0);
+    setSelectedMolecule(null);
     toast({
       title: "Model Reset",
       description: "VAE model has been reset to untrained state",
+    });
+  };
+
+  const handleFilterChange = (criteria: any) => {
+    const filtered = generatedMolecules.filter(mol => {
+      const mw = mol.properties.mw;
+      const logp = mol.properties.logp;
+      const hbd = mol.properties.hbd;
+      const hba = mol.properties.hba;
+      const tpsa = mol.properties.tpsa;
+      
+      return (
+        mw >= criteria.mwRange[0] && mw <= criteria.mwRange[1] &&
+        logp >= criteria.logpRange[0] && logp <= criteria.logpRange[1] &&
+        hbd <= criteria.hbdMax &&
+        hba <= criteria.hbaMax &&
+        tpsa >= criteria.tpsaRange[0] && tpsa <= criteria.tpsaRange[1] &&
+        mol.drugLikeness >= criteria.qedMin
+      );
+    });
+    setFilteredMolecules(filtered);
+  };
+
+  const exportResults = () => {
+    const data = generatedMolecules.map(mol => ({
+      SMILES: mol.smiles,
+      DrugLikeness: mol.drugLikeness,
+      MolecularWeight: mol.properties.mw,
+      LogP: mol.properties.logp,
+      HBD: mol.properties.hbd,
+      HBA: mol.properties.hba,
+      TPSA: mol.properties.tpsa
+    }));
+    
+    const csv = [
+      Object.keys(data[0]).join(','),
+      ...data.map(row => Object.values(row).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vae_generated_molecules.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Export Complete",
+      description: `Exported ${data.length} molecules to CSV file`,
     });
   };
 
