@@ -24,6 +24,30 @@ export const MolecularVisualizer = ({ smiles, properties }: MolecularVisualizerP
   const [showHydrogens, setShowHydrogens] = useState(false);
   const [colorScheme, setColorScheme] = useState<'cpk' | 'element' | 'property'>('cpk');
 
+  // Get color based on color scheme
+  const getAtomColor = (atom: string, index: number) => {
+    switch (colorScheme) {
+      case 'cpk':
+        return atom === 'C' ? 'bg-zinc-600 text-white border-zinc-400' :
+               atom === 'N' ? 'bg-blue-600 text-white border-blue-400' :
+               atom === 'O' ? 'bg-red-600 text-white border-red-400' :
+               atom === 'S' ? 'bg-yellow-500 text-black border-yellow-300' :
+               atom === 'P' ? 'bg-orange-600 text-white border-orange-400' :
+               atom === 'F' ? 'bg-green-500 text-white border-green-300' :
+               atom === 'Cl' ? 'bg-green-600 text-white border-green-400' :
+               atom === 'Br' ? 'bg-amber-700 text-white border-amber-500' :
+               'bg-primary text-primary-foreground border-primary/60';
+      case 'element':
+        const elementColors = ['bg-purple-500', 'bg-cyan-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-rose-500'];
+        return `${elementColors[index % elementColors.length]} text-white border-white/30`;
+      case 'property':
+        const mwColor = properties.mw > 300 ? 'bg-red-500' : properties.mw > 200 ? 'bg-orange-500' : 'bg-green-500';
+        return `${mwColor} text-white border-white/30`;
+      default:
+        return 'bg-primary text-primary-foreground border-primary/60';
+    }
+  };
+
   // Enhanced 2D molecular structure visualization
   const renderMolecule = () => {
     const atoms = smiles.match(/[A-Z][a-z]?/g) || [];
@@ -38,8 +62,11 @@ export const MolecularVisualizer = ({ smiles, properties }: MolecularVisualizerP
     return (
       <div className="relative w-full h-64 bg-gradient-to-br from-background via-background/80 to-muted/30 rounded-lg border border-border overflow-hidden">
         <div 
-          className="w-full h-full flex items-center justify-center p-4"
-          style={{ transform: `scale(${zoom[0]})` }}
+          className="w-full h-full flex items-center justify-center p-4 transition-transform duration-300"
+          style={{ 
+            transform: `scale(${zoom[0]}) rotateX(${rotationX[0]}deg) rotateY(${rotationY[0]}deg)`,
+            transformStyle: 'preserve-3d'
+          }}
         >
           {/* 2D Molecular Structure Layout */}
           <div className="relative">
@@ -58,17 +85,7 @@ export const MolecularVisualizer = ({ smiles, properties }: MolecularVisualizerP
                     
                     {/* Atom */}
                     <div
-                      className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 hover:scale-110 ${
-                        atom === 'C' ? 'bg-zinc-600 text-white border-zinc-400' :
-                        atom === 'N' ? 'bg-blue-600 text-white border-blue-400' :
-                        atom === 'O' ? 'bg-red-600 text-white border-red-400' :
-                        atom === 'S' ? 'bg-yellow-500 text-black border-yellow-300' :
-                        atom === 'P' ? 'bg-orange-600 text-white border-orange-400' :
-                        atom === 'F' ? 'bg-green-500 text-white border-green-300' :
-                        atom === 'Cl' ? 'bg-green-600 text-white border-green-400' :
-                        atom === 'Br' ? 'bg-amber-700 text-white border-amber-500' :
-                        'bg-primary text-primary-foreground border-primary/60'
-                      }`}
+                      className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 hover:scale-110 ${getAtomColor(atom, index)}`}
                       style={{
                         transform: `translateY(${yOffset}px)`,
                       }}
