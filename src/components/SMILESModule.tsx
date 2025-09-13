@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { MolecularVisualizer } from "./MolecularVisualizer";
-import { PropertyFilter } from "./PropertyFilter";
+import { PropertyFilter, FilterCriteria } from "./PropertyFilter";
 import { Download, Upload, Zap, Search } from "lucide-react";
 
 interface SMILESAnalysis {
@@ -145,7 +145,7 @@ export const SMILESModule = () => {
     setInputSMILES(smiles);
   };
 
-  const handleFilterChange = (criteria: any) => {
+  const handleFilterChange = (criteria: FilterCriteria) => {
     const filtered = batchResults.filter(result => {
       const mw = result.molecularWeight;
       return (
@@ -158,37 +158,54 @@ export const SMILESModule = () => {
   };
 
   const exportResults = () => {
-    const data = batchResults.map(result => ({
-      SMILES: result.smiles,
-      Valid: result.isValid,
-      MolecularWeight: result.molecularWeight,
-      Formula: result.formula,
-      Atoms: result.atomCount,
-      Bonds: result.bondCount,
-      Rings: result.rings,
-      AromaticRings: result.aromaticRings,
-      Heteroatoms: result.heteroatoms,
-      RotatableBonds: result.rotatable,
-      LipinskiViolations: result.lipinski.violations
-    }));
-    
-    const csv = [
-      Object.keys(data[0]).join(','),
-      ...data.map(row => Object.values(row).join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'smiles_analysis_results.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Export Complete",
-      description: `Exported ${data.length} analysis results to CSV file`,
-    });
+    if (batchResults.length === 0) {
+      toast({
+        title: "No Data to Export",
+        description: "Analyze some molecules first before exporting",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const data = batchResults.map(result => ({
+        SMILES: result.smiles,
+        Valid: result.isValid,
+        MolecularWeight: result.molecularWeight,
+        Formula: result.formula,
+        Atoms: result.atomCount,
+        Bonds: result.bondCount,
+        Rings: result.rings,
+        AromaticRings: result.aromaticRings,
+        Heteroatoms: result.heteroatoms,
+        RotatableBonds: result.rotatable,
+        LipinskiViolations: result.lipinski.violations
+      }));
+      
+      const csv = [
+        Object.keys(data[0]).join(','),
+        ...data.map(row => Object.values(row).join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'smiles_analysis_results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Complete",
+        description: `Exported ${data.length} analysis results to CSV file`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting the data",
+        variant: "destructive",
+      });
+    }
   };
 
   const findSimilarMolecules = (targetSmiles: string) => {

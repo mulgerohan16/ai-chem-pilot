@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-interface FilterCriteria {
+export interface FilterCriteria {
   mwRange: [number, number];
   logpRange: [number, number];
   hbdMax: number;

@@ -7,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MolecularVisualizer } from "./MolecularVisualizer";
-import { PropertyFilter } from "./PropertyFilter";
+import { PropertyFilter, FilterCriteria } from "./PropertyFilter";
 import { Download, RefreshCw, Filter } from "lucide-react";
 
 interface GeneratedMolecule {
@@ -198,7 +198,7 @@ export const VAEModule = () => {
     });
   };
 
-  const handleFilterChange = (criteria: any) => {
+  const handleFilterChange = (criteria: FilterCriteria) => {
     const filtered = generatedMolecules.filter(mol => {
       const mw = mol.properties.mw;
       const logp = mol.properties.logp;
@@ -219,34 +219,56 @@ export const VAEModule = () => {
   };
 
   const exportResults = () => {
-    const data = generatedMolecules.map(mol => ({
-      SMILES: mol.smiles,
-      DrugLikeness: mol.drugLikeness,
-      MolecularWeight: mol.properties.mw,
-      LogP: mol.properties.logp,
-      HBD: mol.properties.hbd,
-      HBA: mol.properties.hba,
-      TPSA: mol.properties.tpsa
-    }));
-    
-    const csv = [
-      Object.keys(data[0]).join(','),
-      ...data.map(row => Object.values(row).join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'vae_generated_molecules.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Export Complete",
-      description: `Exported ${data.length} molecules to CSV file`,
-    });
+    if (generatedMolecules.length === 0) {
+      toast({
+        title: "No Data to Export",
+        description: "Generate some molecules first before exporting",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const data = generatedMolecules.map(mol => ({
+        SMILES: mol.smiles,
+        DrugLikeness: mol.drugLikeness,
+        MolecularWeight: mol.properties.mw,
+        LogP: mol.properties.logp,
+        HBD: mol.properties.hbd,
+        HBA: mol.properties.hba,
+        TPSA: mol.properties.tpsa
+      }));
+      
+      const csv = [
+        Object.keys(data[0]).join(','),
+        ...data.map(row => Object.values(row).join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'vae_generated_molecules.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Complete",
+        description: `Exported ${data.length} molecules to CSV file`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting the data",
+        variant: "destructive",
+      });
+    }
   };
+
+  // Initialize filtered molecules when generated molecules change
+  useEffect(() => {
+    setFilteredMolecules(generatedMolecules);
+  }, [generatedMolecules]);
 
   return (
     <div className="space-y-6">
@@ -558,50 +580,74 @@ export const VAEModule = () => {
         )}
       </Card>
 
-      {/* Results */}
+      {/* Generated Molecules */}
       {generatedMolecules.length > 0 && (
         <Card className="p-6 bg-card border shadow-molecular">
-          <h3 className="text-xl font-bold text-card-foreground mb-4">Generated Molecules</h3>
-          <div className="grid gap-4">
-            {generatedMolecules.map((molecule, index) => (
-              <div key={molecule.id} className="border rounded-lg p-4 bg-muted/50">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h4 className="font-semibold text-card-foreground">Molecule {index + 1}</h4>
-                    <code className="text-sm bg-primary-light px-2 py-1 rounded text-primary font-mono">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-card-foreground">Generated Molecules</h3>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
+                <Filter className="w-4 h-4 mr-2" />
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportResults}>
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+              <Button variant="outline" size="sm" onClick={generateMolecules}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Regenerate
+              </Button>
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="mb-6">
+              <PropertyFilter 
+                onFilterChange={handleFilterChange}
+                moleculeCount={generatedMolecules.length}
+                filteredCount={filteredMolecules.length}
+              />
+            </div>
+          )}
+
+          <div className="grid gap-6">
+            {(showFilters ? filteredMolecules : generatedMolecules).map((molecule, index) => (
+              <div key={molecule.id} className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Badge variant="outline">#{index + 1}</Badge>
+                      <Badge variant={molecule.drugLikeness > 0.8 ? "default" : "secondary"}>
+                        {(molecule.drugLikeness * 100).toFixed(1)}% Drug-like
+                      </Badge>
+                    </div>
+                    <code className="text-sm font-mono text-primary block mb-2">
                       {molecule.smiles}
                     </code>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground">Drug-likeness</div>
-                    <div className="text-lg font-bold text-accent">
-                      {(molecule.drugLikeness * 100).toFixed(1)}%
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs text-muted-foreground">
+                      <span>MW: {molecule.properties.mw.toFixed(1)}</span>
+                      <span>LogP: {molecule.properties.logp.toFixed(2)}</span>
+                      <span>HBD: {molecule.properties.hbd}</span>
+                      <span>HBA: {molecule.properties.hba}</span>
+                      <span>TPSA: {molecule.properties.tpsa.toFixed(1)}</span>
                     </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedMolecule(selectedMolecule === molecule.id ? null : molecule.id)}
+                  >
+                    {selectedMolecule === molecule.id ? 'Hide 3D' : 'View 3D'}
+                  </Button>
                 </div>
                 
-                <div className="grid grid-cols-5 gap-4 text-sm">
-                  <div className="text-center">
-                    <div className="text-muted-foreground">MW</div>
-                    <div className="font-semibold">{molecule.properties.mw}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-muted-foreground">LogP</div>
-                    <div className="font-semibold">{molecule.properties.logp}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-muted-foreground">HBD</div>
-                    <div className="font-semibold">{molecule.properties.hbd}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-muted-foreground">HBA</div>
-                    <div className="font-semibold">{molecule.properties.hba}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-muted-foreground">TPSA</div>
-                    <div className="font-semibold">{molecule.properties.tpsa}</div>
-                  </div>
-                </div>
+                {selectedMolecule === molecule.id && (
+                  <MolecularVisualizer 
+                    smiles={molecule.smiles}
+                    properties={molecule.properties}
+                  />
+                )}
               </div>
             ))}
           </div>
